@@ -1,4 +1,4 @@
-# fender - web_api
+# Fender - web_api
 
 This repo is currently in development and run in a local or development environment
 This repo provides CRUD operations on a User Authentication System. It supports:
