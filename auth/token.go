@@ -13,7 +13,7 @@ type UserAuth struct {
 	UserID 		int
 	UserUUID	string
 }
-
+// todo - implement refresh tokens
 func CreateToken(ua UserAuth) (string, error) {
 	expireTime, err := time.ParseDuration(os.Getenv("TIMEOUT"))
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -18,9 +19,12 @@ type User struct {
 	Name			string		`db:"name"`
 	Email 			string		`db:"email"`
 	Password		string		`db:"password"`
+//	PasswordHash	string		`db:"password"`
 	CreatedAt		time.Time 	`db:"created_at"`
 	UpdatedAt		time.Time	`db:"updated_at"`
 }
+
+const userPasswordPepper = "limited-edition-stratocaster-guitar"
 
 func NewUserService() (*UserService, error) {
 	userDBCredential := os.Getenv("DB_USER") + ":" + os.Getenv("PASSWORD")
@@ -36,6 +40,12 @@ func NewUserService() (*UserService, error) {
 }
 
 func (us *UserService) Create(user *User) (int64, error) {
+	pwBytes := []byte(user.Password + userPasswordPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return 0, err
+	}
+	user.Password = string(hashedBytes)
 	query := `INSERT INTO users (name, email, password) VALUES (:name, :email, :password)`
 	result , err := us.db.NamedExec(query, user)
 	if err != nil {
@@ -43,7 +53,6 @@ func (us *UserService) Create(user *User) (int64, error) {
 	}
 
 	li, err := result.LastInsertId()
-	fmt.Println("li", li)
 	if err != nil {
 		return 0, err
 	}
@@ -51,7 +60,6 @@ func (us *UserService) Create(user *User) (int64, error) {
 	return li, nil
 }
 
-// todo errors
 func (us *UserService) ByEmail(email string) (*User, error) {
 	var user User
 	query := `SELECT * from users where email = ?`
@@ -63,14 +71,27 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
-//todo errors that happen here?
+func (us *UserService) CheckCredential(email string, password string) (*User, error) {
+	result, err := us.ByEmail(email)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(password + userPasswordPepper))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return result, nil
+}
+
+//todo - change the sqlx calls
 func (us *UserService) Update (userID int, userUpdate User) error {
 	// todo resource not found error
-	fmt.Println("In update model")
 	fmt.Printf("%#v\n", userUpdate)
 	tx := us.db.MustBegin()
 	if userUpdate.Name != "" {
-		fmt.Println("in Name", userUpdate.Name, userID)
 		tx.MustExec(tx.Rebind("UPDATE users SET name = ? WHERE id = ?"), userUpdate.Name, userID)
 	}
 	if userUpdate.Email != "" {

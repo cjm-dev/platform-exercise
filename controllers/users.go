@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -30,7 +29,7 @@ func NewUser(us *models.UserService) *User{
 }
 
 // Create User
-//
+// Creates a user
 // POST /login
 func (u *User) Create(w http.ResponseWriter, r *http.Request) {
 	var up UserNew
@@ -43,7 +42,6 @@ func (u *User) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// todo: add bcrypt + pepper
 	nu := models.User{
 		Name: up.Name,
 		Email: up.Email,
@@ -81,15 +79,9 @@ func (u *User) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check the user's credentials
-	result, err := u.us.ByEmail(ul.Email)
+	result, err := u.us.CheckCredential(ul.Email, ul.Password)
 	if err != nil {
-		fmt.Println(err)
-		msg := "login information does not match our records"
-		responses.SendErrorResponse(w, http.StatusUnauthorized, msg)
-		return
-	}
-	if result.Password != ul.Password {
+		log.Println(err)
 		msg := "login information does not match our records"
 		responses.SendErrorResponse(w, http.StatusUnauthorized, msg)
 		return
